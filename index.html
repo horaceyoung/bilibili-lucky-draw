@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B站抽奖工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --pink: #fb7299;
+      --pink-dark: #e05a7a;
+      --blue: #00a1d6;
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --border: #e3e5e7;
+      --text: #18191c;
+      --text-sub: #9499a0;
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,.08);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    header .logo {
+      width: 36px; height: 36px;
+      background: var(--pink);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    header h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+    header .sub { font-size: 13px; color: var(--text-sub); margin-left: 4px; }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-header .icon { font-size: 18px; }
+    .card-header h2 { font-size: 15px; font-weight: 700; }
+    .card-body { padding: 20px; }
+
+    /* NOTICE */
+    .notice {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #795548;
+      line-height: 1.7;
+    }
+    .notice strong { color: #e65100; }
+    .notice code {
+      background: rgba(0,0,0,.06);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* FORM */
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    label .hint {
+      font-weight: 400;
+      color: var(--text-sub);
+      margin-left: 6px;
+    }
+    input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color .15s;
+      outline: none;
+    }
+    input:focus, textarea:focus { border-color: var(--pink); background: #fff; }
+    textarea { resize: vertical; min-height: 72px; font-family: monospace; font-size: 12px; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--pink);
+      cursor: pointer;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--pink-dark); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #eee; }
+    .btn-danger { background: #ff5252; color: #fff; }
+    .btn-success { background: #4caf50; color: #fff; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    /* PROGRESS */
+    .progress-section { display: none; }
+    .progress-section.visible { display: block; }
+    .progress-bar-wrap {
+      background: var(--border);
+      border-radius: 100px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--pink);
+      border-radius: 100px;
+      width: 0%;
+      transition: width .3s ease;
+    }
+    .progress-text { font-size: 13px; color: var(--text-sub); }
+
+    /* STATS */
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .stat-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stat-chip span { color: var(--pink); margin-left: 4px; }
+
+    /* POOL TABLE */
+    .pool-section { display: none; }
+    .pool-section.visible { display: block; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: var(--bg);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--text-sub);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .uid-link { color: var(--blue); text-decoration: none; font-weight: 600; }
+    .uid-link:hover { text-decoration: underline; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tag-repost { background: #e3f2fd; color: #1565c0; }
+    .tag-comment { background: #f3e5f5; color: #6a1b9a; }
+    .tag-like { background: #fce4ec; color: #880e4f; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+
+    /* DRAW */
+    .draw-section { display: none; }
+    .draw-section.visible { display: block; }
+
+    .winner-display {
+      min-height: 120px;
+      background: linear-gradient(135deg, #fff0f3, #fff8e1);
+      border: 2px solid var(--pink);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      margin-bottom: 16px;
+      transition: all .3s;
+    }
+    .winner-display.rolling {
+      animation: roll 0.08s linear infinite;
+      border-color: var(--pink-dark);
+    }
+    @keyframes roll {
+      0%   { background: linear-gradient(135deg, #fff0f3, #fff8e1); }
+      50%  { background: linear-gradient(135deg, #fff8e1, #e3f2fd); }
+      100% { background: linear-gradient(135deg, #fff0f3, #fff8e1); }
+    }
+    .winner-content { text-align: center; }
+    .winner-uid {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--pink);
+      display: block;
+      line-height: 1.2;
+    }
+    .winner-meta {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-top: 6px;
+    }
+
+    .winner-history {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .winner-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 14px;
+    }
+    .winner-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-sub);
+      min-width: 30px;
+    }
+    .winner-info a { color: var(--blue); font-weight: 700; text-decoration: none; font-size: 14px; }
+    .winner-info a:hover { text-decoration: underline; }
+    .winner-info .winner-tags { margin-top: 3px; display: flex; gap: 4px; }
+
+    /* LOG */
+    .log-box {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 8px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-info  { color: #89dceb; }
+    .log-ok    { color: #a6e3a1; }
+    .log-warn  { color: #f9e2af; }
+    .log-error { color: #f38ba8; }
+
+    .separator {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎲</div>
+  <h1>B站抽奖工具</h1>
+  <span class="sub">动态 / 视频</span>
+</header>
+
+<main>
+
+  <!-- NOTICE -->
+  <div class="notice">
+    <strong>使用说明：</strong>请先在终端运行 <code>python server.py</code>，然后访问 <code>http://localhost:8080</code>。<br>
+    <strong>支持：</strong>动态链接（<code>t.bilibili.com/xxx</code>、<code>bilibili.com/opus/xxx</code>）和视频链接（<code>bilibili.com/video/BVxxx</code>）。<br>
+    <strong>评论</strong>功能无需登录即可使用；<strong>转发、点赞、关注验证</strong>需要填写 SESSDATA。<br>
+    <strong>获取 SESSDATA：</strong>登录B站 → F12 → Application → Cookies → 复制 SESSDATA 值。
+  </div>
+
+  <!-- CONFIG -->
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">⚙️</span>
+      <h2>抽奖配置</h2>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <label>动态 / 视频 URL <span class="hint">必填</span></label>
+        <input type="text" id="inputUrl"
+          placeholder="动态: t.bilibili.com/xxx 或 opus/xxx | 视频: bilibili.com/video/BVxxx" />
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>参与条件</label>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+            <label class="checkbox-row">
+              <input type="checkbox" id="chkRepost" checked />
+              收录转发用户
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="chkComment" checked />
+              收录评论用户
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="chkLike" />
+              收录点赞用户
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="chkFollowOnly" />
+              仅限关注主播的用户
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="chkDedup" checked />
+              同一用户多次参与只计一次
+            </label>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label>抽奖人数 <span class="hint">默认 1</span></label>
+          <input type="number" id="inputCount" value="1" min="1" max="1000" style="max-width:120px;" />
+
+          <div style="margin-top:16px;">
+            <label>主播 UID <span class="hint">开启"仅关注"时必填</span></label>
+            <input type="text" id="inputOwnerUid" placeholder="例：123456" style="max-width:180px;margin-top:6px;" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>SESSDATA Cookie <span class="hint">可选，提升接口稳定性</span></label>
+        <input type="text" id="inputSessdata" placeholder="从浏览器 Cookie 中复制 SESSDATA 的值" />
+      </div>
+
+      <div class="form-row">
+        <label>屏蔽 UID 名单 <span class="hint">可选，每行一个 UID，被屏蔽的用户不参与抽奖</span></label>
+        <textarea id="inputBlocklist" placeholder="123456&#10;789012"></textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnFetch" onclick="startFetch()">🚀 开始收集参与者</button>
+        <button class="btn btn-secondary" id="btnReset" onclick="resetAll()">🔄 重置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="card progress-section" id="progressSection">
+    <div class="card-header">
+      <span class="icon">📡</span>
+      <h2>数据收集进度</h2>
+    </div>
+    <div class="card-body">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-text" id="progressText">准备中…</div>
+      <hr class="separator" />
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- POOL -->
+  <div class="card pool-section" id="poolSection">
+    <div class="card-header">
+      <span class="icon">👥</span>
+      <h2>参与者名单</h2>
+    </div>
+    <div class="card-body">
+      <div class="stats-row" id="statsRow"></div>
+
+      <div class="btn-row" style="margin-bottom:14px;">
+        <button class="btn btn-secondary" onclick="exportPool()">📥 导出名单 (CSV)</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>UID</th>
+              <th>参与方式</th>
+            </tr>
+          </thead>
+          <tbody id="poolTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRAW -->
+  <div class="card draw-section" id="drawSection">
+    <div class="card-header">
+      <span class="icon">🎉</span>
+      <h2>抽奖</h2>
+    </div>
+    <div class="card-body">
+      <div class="winner-display" id="winnerDisplay">
+        <div class="winner-content">
+          <span class="winner-uid" id="winnerUid" style="color:var(--text-sub);font-size:18px;">等待抽取...</span>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-bottom:20px;">
+        <button class="btn btn-primary" id="btnDraw" onclick="draw()">🎲 开始抽奖</button>
+        <button class="btn btn-success" id="btnDrawAll" onclick="drawAll()">🎊 一次抽取全部</button>
+        <button class="btn btn-secondary" onclick="clearWinners()">🗑️ 清空结果</button>
+        <button class="btn btn-secondary" onclick="exportWinners()">📥 导出获奖名单</button>
+      </div>
+
+      <div id="winnerHistory" class="winner-history"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let pool = [];          // [{ uid, sources: Set<'repost'|'comment'|'like'> }]
+let winners = [];
+let isRunning = false;
+let abortFlag = false;
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+
+// 解析输入，返回 { type: 'dynamic'|'video', id: string }
+function parseInput(input) {
+  input = input.trim();
+  // 视频: bilibili.com/video/BVxxxxx
+  let m = input.match(/bilibili\.com\/video\/(BV[\w]+)/i);
+  if (m) return { type: 'video', id: m[1] };
+  // 视频: bilibili.com/video/avxxxxx
+  m = input.match(/bilibili\.com\/video\/av(\d+)/i);
+  if (m) return { type: 'video', id: 'av' + m[1] };
+  // 动态: t.bilibili.com/123456
+  m = input.match(/t\.bilibili\.com\/(\d+)/);
+  if (m) return { type: 'dynamic', id: m[1] };
+  // 动态: bilibili.com/opus/123456
+  m = input.match(/bilibili\.com\/opus\/(\d+)/);
+  if (m) return { type: 'dynamic', id: m[1] };
+  // 纯BV号
+  m = input.match(/^(BV[\w]+)$/i);
+  if (m) return { type: 'video', id: m[1] };
+  // 纯数字 -> 动态
+  if (/^\d+$/.test(input)) return { type: 'dynamic', id: input };
+  return null;
+}
+
+function log(msg, type = 'info') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('span');
+  line.className = 'log-' + type;
+  const time = new Date().toLocaleTimeString();
+  line.textContent = `[${time}] ${msg}\n`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(pct, text) {
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = text;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── Local API helpers ──────────────────────────────────────────────────────
+// 所有请求走本地 server.py 代理，避免 CORS
+
+async function localApi(path, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  const url = `/api/${path}?${qs}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return await resp.json();
+}
+
+// ─── API: Dynamic Detail ────────────────────────────────────────────────────
+async function getDynamicDetail(dynamicId, sessdata) {
+  const json = await localApi('dynamic', { id: dynamicId, sessdata });
+  if (json.code !== 0) throw new Error(json.message || `code ${json.code}`);
+  return json.data?.card?.desc ?? null;
+}
+
+// ─── API: Video Detail ─────────────────────────────────────────────────────
+async function getVideoDetail(videoId, sessdata) {
+  const params = { sessdata };
+  if (videoId.startsWith('av')) {
+    params.aid = videoId.slice(2);
+  } else {
+    params.bvid = videoId;
+  }
+  const json = await localApi('video', params);
+  if (json.code !== 0) throw new Error(json.message || `code ${json.code}`);
+  return json.data;
+}
+
+// ─── API: Reposts (需要 SESSDATA) ───────────────────────────────────────────
+async function fetchAllReposts(dynamicId, sessdata) {
+  const uids = new Set();
+  let offset = '';
+  let page = 1;
+  while (!abortFlag) {
+    log(`  获取转发第 ${page} 页…`);
+    let json;
+    try {
+      json = await localApi('reposts', { id: dynamicId, offset, sessdata });
+    } catch(e) {
+      log(`  转发接口错误: ${e.message}`, 'warn');
+      break;
+    }
+    if (json.code !== 0) {
+      log(`  转发接口错误: ${json.message || json.code}`, 'warn');
+      break;
+    }
+    const items = json.data?.items ?? [];
+    for (const item of items) {
+      const uid = item?.desc?.uid;
+      if (uid) uids.add(String(uid));
+    }
+    const hasMore = json.data?.has_more;
+    offset = json.data?.offset ?? '';
+    if (!hasMore || items.length === 0) break;
+    page++;
+    await delay(300);
+  }
+  return uids;
+}
+
+// ─── API: Comments (使用 reply/main cursor 分页，无需登录) ─────────────────
+// commentType: 1=视频, 11=图文动态, 17=纯文本/转发动态
+// oid: 视频=aid, 图文动态=rid, 纯文本动态=dynamic_id
+async function fetchAllCommentsV2(commentType, oid, sessdata) {
+  const uids = new Set();
+  let nextCursor = 0;
+  let page = 1;
+  while (!abortFlag) {
+    log(`  获取评论第 ${page} 页…`);
+    let json;
+    try {
+      json = await localApi('comments', {
+        oid, type: commentType, next: nextCursor, mode: 2, sessdata
+      });
+    } catch(e) {
+      log(`  评论接口错误: ${e.message}`, 'warn');
+      break;
+    }
+    if (json.code !== 0) {
+      log(`  评论接口错误: ${json.message || json.code}`, 'warn');
+      break;
+    }
+    const replies = json.data?.replies ?? [];
+    for (const r of replies) {
+      if (r.member?.mid) uids.add(String(r.member.mid));
+      // 也收集楼中楼回复
+      const subReplies = r.replies ?? [];
+      for (const sr of subReplies) {
+        if (sr.member?.mid) uids.add(String(sr.member.mid));
+      }
+    }
+    const cursor = json.data?.cursor ?? {};
+    const isEnd = cursor.is_end;
+    nextCursor = cursor.next ?? 0;
+    if (isEnd || replies.length === 0) break;
+    page++;
+    await delay(300);
+  }
+  return uids;
+}
+
+// ─── API: Likes (需要 SESSDATA) ─────────────────────────────────────────────
+async function fetchAllLikes(dynamicId, sessdata) {
+  const uids = new Set();
+  let pn = 1;
+  while (!abortFlag) {
+    log(`  获取点赞第 ${pn} 页…`);
+    let json;
+    try {
+      json = await localApi('likes', { id: dynamicId, pn, sessdata });
+    } catch(e) {
+      log(`  点赞接口错误: ${e.message}`, 'warn');
+      break;
+    }
+    if (json.code !== 0) {
+      log(`  点赞接口错误: ${json.message || json.code}`, 'warn');
+      break;
+    }
+    const items = json.data?.item_likes ?? [];
+    for (const item of items) {
+      if (item.uid) uids.add(String(item.uid));
+    }
+    const hasMore = json.data?.has_more;
+    if (!hasMore || items.length === 0) break;
+    pn++;
+    await delay(300);
+  }
+  return uids;
+}
+
+// ─── API: Follow Check (需要 SESSDATA) ──────────────────────────────────────
+async function filterFollowers(uids, ownerUid, sessdata) {
+  const arr = Array.from(uids);
+  const followers = new Set();
+  const chunkSize = 100;
+  for (let i = 0; i < arr.length; i += chunkSize) {
+    const chunk = arr.slice(i, i + chunkSize);
+    log(`  验证关注状态 ${i + 1}~${Math.min(i + chunkSize, arr.length)} / ${arr.length}…`);
+    let json;
+    try {
+      json = await localApi('follow', { fids: chunk.join(','), sessdata });
+    } catch(e) {
+      log(`  关注验证失败: ${e.message}，跳过此批`, 'warn');
+      continue;
+    }
+    if (json.code !== 0) {
+      log(`  关注验证失败: ${json.message}，跳过此批`, 'warn');
+      continue;
+    }
+    const rel = json.data ?? {};
+    for (const [uid, info] of Object.entries(rel)) {
+      if ((info.attribute & 2) === 2) followers.add(uid);
+    }
+    await delay(300);
+  }
+  return followers;
+}
+
+// ─── Main Fetch Flow ──────────────────────────────────────────────────────────
+async function startFetch() {
+  if (isRunning) return;
+
+  const rawInput = document.getElementById('inputUrl').value.trim();
+  const parsed = parseInput(rawInput);
+  if (!parsed) {
+    alert('请输入有效的动态 URL、视频 URL 或 BV 号');
+    return;
+  }
+  const inputType = parsed.type;  // 'dynamic' or 'video'
+  const inputId = parsed.id;
+
+  const doRepost   = document.getElementById('chkRepost').checked;
+  const doComment  = document.getElementById('chkComment').checked;
+  const doLike     = document.getElementById('chkLike').checked;
+  const doFollow   = document.getElementById('chkFollowOnly').checked;
+  const doDedup    = document.getElementById('chkDedup').checked;
+  const sessdata   = document.getElementById('inputSessdata').value.trim();
+  const ownerUid   = document.getElementById('inputOwnerUid').value.trim();
+  const blockRaw   = document.getElementById('inputBlocklist').value.trim();
+  const blocklist  = new Set(blockRaw.split('\n').map(s => s.trim()).filter(Boolean));
+
+  if (doFollow && !ownerUid) {
+    alert('开启"仅限关注主播"时，请填写主播 UID');
+    return;
+  }
+  if (!doRepost && !doComment && !doLike) {
+    alert('请至少勾选一种参与方式');
+    return;
+  }
+  if ((doRepost || doLike || doFollow) && !sessdata) {
+    if (!confirm('转发/点赞/关注验证需要 SESSDATA 才能正常工作。\n\n未填写 SESSDATA，这些功能可能返回 0 条结果。\n\n确定继续吗？')) return;
+  }
+
+  isRunning = true;
+  abortFlag = false;
+  pool = [];
+  winners = [];
+  document.getElementById('logBox').textContent = '';
+  document.getElementById('poolTableBody').innerHTML = '';
+  document.getElementById('winnerHistory').innerHTML = '';
+  document.getElementById('winnerUid').textContent = '等待抽取...';
+  document.getElementById('winnerUid').style.color = 'var(--text-sub)';
+  document.getElementById('winnerUid').style.fontSize = '18px';
+  document.getElementById('progressSection').classList.add('visible');
+  document.getElementById('poolSection').classList.remove('visible');
+  document.getElementById('drawSection').classList.remove('visible');
+  document.getElementById('btnFetch').disabled = true;
+
+  const repostUids  = new Set();
+  const commentUids = new Set();
+  const likeUids    = new Set();
+
+  try {
+    // Step 1: Get detail info
+    setProgress(5, '获取详情…');
+    let commentType, commentOid, dynamicId = null;
+
+    if (inputType === 'video') {
+      log(`视频: ${inputId}`);
+      try {
+        const video = await getVideoDetail(inputId, sessdata);
+        log(`标题: ${video.title}`, 'ok');
+        log(`UP主: ${video.owner.name} (UID ${video.owner.mid})`, 'ok');
+        log(`互动: 评论${video.stat.reply} 点赞${video.stat.like} 投币${video.stat.coin} 收藏${video.stat.favorite} 分享${video.stat.share}`, 'ok');
+        commentType = 1;
+        commentOid = video.aid;
+      } catch(e) {
+        log(`获取视频详情失败: ${e.message}`, 'error');
+        throw e;
+      }
+    } else {
+      dynamicId = inputId;
+      log(`动态 ID: ${dynamicId}`);
+      let desc = null;
+      try {
+        desc = await getDynamicDetail(dynamicId, sessdata);
+        log(`动态作者: UID ${desc?.uid}`, 'ok');
+        log(`动态类型: type=${desc?.type}, rid=${desc?.rid}`, 'ok');
+        log(`互动统计: 转发${desc?.repost ?? '?'} 评论${desc?.comment ?? '?'} 点赞${desc?.like ?? '?'}`, 'ok');
+      } catch(e) {
+        log(`获取动态详情失败: ${e.message}，将使用默认参数`, 'warn');
+      }
+      const rType = desc?.type ?? 17;
+      const rid = desc?.rid ?? dynamicId;
+      // 动态类型 -> 评论区参数
+      if (rType === 2) {
+        commentType = 11; commentOid = rid;
+      } else if (rType === 8) {
+        commentType = 1; commentOid = rid;
+      } else {
+        commentType = 17; commentOid = dynamicId;
+      }
+    }
+
+    // Step 2: Reposts (仅动态支持)
+    if (doRepost) {
+      if (inputType === 'video') {
+        log('视频不支持转发列表抽奖，已跳过', 'warn');
+      } else {
+        setProgress(15, '收集转发用户…');
+        log('--- 开始收集转发 ---');
+        const set = await fetchAllReposts(dynamicId, sessdata);
+        for (const uid of set) repostUids.add(uid);
+        log(`转发用户: ${repostUids.size} 人`, 'ok');
+      }
+    }
+
+    // Step 3: Comments
+    if (doComment) {
+      setProgress(45, '收集评论用户…');
+      log('--- 开始收集评论 ---');
+      const set = await fetchAllCommentsV2(commentType, commentOid, sessdata);
+      for (const uid of set) commentUids.add(uid);
+      log(`评论用户: ${commentUids.size} 人`, 'ok');
+    }
+
+    // Step 4: Likes (仅动态支持)
+    if (doLike) {
+      if (inputType === 'video') {
+        log('视频不支持点赞列表抽奖，已跳过', 'warn');
+      } else {
+        setProgress(70, '收集点赞用户…');
+        log('--- 开始收集点赞 ---');
+        const set = await fetchAllLikes(dynamicId, sessdata);
+        for (const uid of set) likeUids.add(uid);
+        log(`点赞用户: ${likeUids.size} 人`, 'ok');
+      }
+    }
+
+    // Step 5: Merge
+    setProgress(85, '合并参与者名单…');
+    log('--- 合并名单 ---');
+    const allUids = new Set([...repostUids, ...commentUids, ...likeUids]);
+    log(`去重前总人数: ${allUids.size}`);
+
+    // Step 6: Follow filter
+    let qualifiedUids = allUids;
+    if (doFollow) {
+      setProgress(88, '验证关注状态…');
+      log('--- 验证关注 ---');
+      qualifiedUids = await filterFollowers(allUids, ownerUid, sessdata);
+      log(`已关注用户: ${qualifiedUids.size} 人`, 'ok');
+    }
+
+    // Step 7: Blocklist + build pool
+    setProgress(95, '最终过滤…');
+    for (const uid of qualifiedUids) {
+      if (blocklist.has(uid)) continue;
+      const sources = new Set();
+      if (repostUids.has(uid))  sources.add('repost');
+      if (commentUids.has(uid)) sources.add('comment');
+      if (likeUids.has(uid))    sources.add('like');
+      if (doDedup) {
+        pool.push({ uid, sources });
+      } else {
+        // add multiple times for multi-source participation
+        for (const s of sources) {
+          pool.push({ uid, sources: new Set([s]) });
+        }
+      }
+    }
+
+    setProgress(100, `完成！共 ${pool.length} 人参与`);
+    log(`最终参与人数: ${pool.length}`, 'ok');
+
+    renderPool();
+    renderStats(repostUids.size, commentUids.size, likeUids.size, pool.length);
+    document.getElementById('poolSection').classList.add('visible');
+    document.getElementById('drawSection').classList.add('visible');
+
+  } catch(e) {
+    log(`严重错误: ${e.message}`, 'error');
+    setProgress(0, '发生错误，请查看日志');
+  } finally {
+    isRunning = false;
+    document.getElementById('btnFetch').disabled = false;
+  }
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderStats(repost, comment, like, total) {
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-chip">总参与 <span>${total}</span> 人</div>
+    <div class="stat-chip">转发 <span>${repost}</span></div>
+    <div class="stat-chip">评论 <span>${comment}</span></div>
+    <div class="stat-chip">点赞 <span>${like}</span></div>
+  `;
+}
+
+function renderPool() {
+  const tbody = document.getElementById('poolTableBody');
+  if (pool.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3"><div class="empty-state">没有找到参与用户</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = pool.slice(0, 500).map((p, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><a class="uid-link" href="https://space.bilibili.com/${p.uid}" target="_blank">${p.uid}</a></td>
+      <td>${sourceTags(p.sources)}</td>
+    </tr>
+  `).join('') + (pool.length > 500 ? `<tr><td colspan="3" style="text-align:center;color:var(--text-sub);padding:12px;">仅显示前 500 条，实际共 ${pool.length} 条</td></tr>` : '');
+}
+
+function sourceTags(sources) {
+  const map = { repost: ['tag-repost','转发'], comment: ['tag-comment','评论'], like: ['tag-like','点赞'] };
+  return Array.from(sources).map(s => `<span class="tag ${map[s][0]}">${map[s][1]}</span>`).join(' ');
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+function draw() {
+  if (pool.length === 0) { alert('参与者名单为空'); return; }
+  const count = parseInt(document.getElementById('inputCount').value) || 1;
+  doDrawAnimation(count, false);
+}
+
+function drawAll() {
+  if (pool.length === 0) { alert('参与者名单为空'); return; }
+  const count = parseInt(document.getElementById('inputCount').value) || 1;
+  doDrawAnimation(count, true);
+}
+
+async function doDrawAnimation(count, showAll) {
+  const display = document.getElementById('winnerDisplay');
+  const uidEl   = document.getElementById('winnerUid');
+
+  // Shuffle display for 1.5s
+  display.classList.add('rolling');
+  const rolling = setInterval(() => {
+    const r = pool[Math.floor(Math.random() * pool.length)];
+    uidEl.textContent = r.uid;
+    uidEl.style.color = 'var(--pink-dark)';
+    uidEl.style.fontSize = '28px';
+  }, 80);
+
+  await delay(1500);
+  clearInterval(rolling);
+  display.classList.remove('rolling');
+
+  // Pick winners (no replacement within current draw session)
+  const drawn = [];
+  const remaining = pool.slice();
+  for (let i = 0; i < count && remaining.length > 0; i++) {
+    const idx = Math.floor(Math.random() * remaining.length);
+    drawn.push(remaining.splice(idx, 1)[0]);
+  }
+
+  // Show last winner in display
+  const last = drawn[drawn.length - 1];
+  uidEl.textContent = last.uid;
+  uidEl.style.color = 'var(--pink)';
+  uidEl.style.fontSize = '32px';
+
+  // Add to history
+  for (const w of drawn) {
+    winners.push(w);
+    appendWinnerItem(w, winners.length);
+  }
+}
+
+function appendWinnerItem(w, num) {
+  const hist = document.getElementById('winnerHistory');
+  const div = document.createElement('div');
+  div.className = 'winner-item';
+  div.innerHTML = `
+    <div class="winner-num">#${num}</div>
+    <div class="winner-info">
+      <a href="https://space.bilibili.com/${w.uid}" target="_blank">UID: ${w.uid}</a>
+      <div class="winner-tags">${sourceTags(w.sources)}</div>
+    </div>
+  `;
+  hist.prepend(div);
+}
+
+function clearWinners() {
+  winners = [];
+  document.getElementById('winnerHistory').innerHTML = '';
+  document.getElementById('winnerUid').textContent = '等待抽取...';
+  document.getElementById('winnerUid').style.color = 'var(--text-sub)';
+  document.getElementById('winnerUid').style.fontSize = '18px';
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportPool() {
+  const rows = ['uid,sources'];
+  for (const p of pool) rows.push(`${p.uid},"${Array.from(p.sources).join(';')}"`);
+  downloadCsv(rows.join('\n'), '参与者名单.csv');
+}
+
+function exportWinners() {
+  const rows = ['rank,uid,sources'];
+  winners.forEach((w, i) => rows.push(`${i + 1},${w.uid},"${Array.from(w.sources).join(';')}"`));
+  downloadCsv(rows.join('\n'), '获奖名单.csv');
+}
+
+function downloadCsv(content, filename) {
+  const bom = '\uFEFF';
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function resetAll() {
+  if (isRunning) { abortFlag = true; }
+  pool = [];
+  winners = [];
+  document.getElementById('logBox').textContent = '';
+  document.getElementById('progressSection').classList.remove('visible');
+  document.getElementById('poolSection').classList.remove('visible');
+  document.getElementById('drawSection').classList.remove('visible');
+  document.getElementById('btnFetch').disabled = false;
+  isRunning = false;
+}
+</script>
+</body>
+</html>
